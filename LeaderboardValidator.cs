@@ -14,7 +14,7 @@ namespace LeaderboardValidator
         public static Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         internal static new ManualLogSource Logger;
         public static List<EventState> eventStates = new List<EventState>();
-
+        //TODO Actually make a method to validate the event states.
         private void Awake()
         {
             // Plugin startup logic
