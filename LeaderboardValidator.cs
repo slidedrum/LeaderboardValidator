@@ -8,9 +8,56 @@ using UnityEngine;
 
 namespace LeaderboardValidator
 {
+    //Different hooks that trigger saving the gamestate.
+    [HarmonyPatch(typeof(WaveManager), nameof(WaveManager.NewWave))]
+    public class WaveManager_NewWave_Patch
+    {
+        public static void Postfix(AgentBehaviourSpawner __instance)
+        {
+            LeaderboardValidator.SaveEventState("NewWave");
+        }
+    }
+    [HarmonyPatch(typeof(AbilitySlotBase), nameof(AbilitySlotBase.ModifyBlood))]
+    public class AbilitySlotBase_ModifyBlood_Patch
+    {
+        public static void Postfix(AbilitySlotBase __instance)
+        {
+            LeaderboardValidator.SaveEventState("ModifyBlood");
+        }
+    }
+    [HarmonyPatch(typeof(BloodBucksBank), "set_NetworkbloodBucks")]
+    class Patch_NetworkbloodBucks
+    {
+        static void Postfix(float value)
+        {
+            LeaderboardValidator.SaveEventState("Bucks");
+        }
+    }
     [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
     public class LeaderboardValidator : BaseUnityPlugin
     {
+        public class GameState //The class that has the entire gamestate
+        { 
+            public List<PlayerState> playerList = new();
+            public int currentRound = -1;
+            public int zombiesLeft = -1;
+        }
+        public class PlayerState //The state of each player
+        {
+            public string playerName;
+            public Vector3 position;
+            public int points;
+            public int? weaponAmmo;
+            public int? reserveAmmo;
+            public string[] currentWeapons;
+            public int currentWeaponIndex;
+        }
+        public class EventState //A saved game state event in time.
+        {
+            public string eventName;
+            public GameState gameState;
+            //TODO add timestamps
+        }
         public static Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         internal static new ManualLogSource Logger;
         public static List<EventState> eventStates = new List<EventState>();
@@ -22,7 +69,18 @@ namespace LeaderboardValidator
             Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
             harmony.PatchAll();
         }
-        public static GameState GetGameState()
+        public static void SaveEventState(string eventName) //Called from hooks to save the gamestate at that moment in time.
+        {
+            Logger.LogInfo($"Saving event state for {eventName}");
+            EventState eventState = new EventState()
+            {
+                eventName = eventName,
+                gameState = GetGameState()
+            };
+            Logger.LogInfo($"Saved event state for {eventName}");
+            eventStates.Add(eventState);
+        }
+        public static GameState GetGameState() //A method to get the current gamestate. This is called by SaveEventState.
         {
             Logger.LogInfo("Getting gamestate");
             GameState currentState = new GameState();
@@ -81,62 +139,6 @@ namespace LeaderboardValidator
                 .GetValue<int>();
             Logger.LogInfo($"Zombies left: {currentState.zombiesLeft}");
             return currentState;
-        }
-        public static void SaveEventState(string eventName)
-        {
-            Logger.LogInfo($"Saving event state for {eventName}");
-            EventState eventState = new EventState()
-            {
-                eventName = eventName,
-                gameState = GetGameState()
-            };
-            Logger.LogInfo($"Saved event state for {eventName}");
-            eventStates.Add(eventState);
-        }
-        public class GameState
-        {
-            public List<PlayerState> playerList = new();
-            public int currentRound = -1;
-            public int zombiesLeft = -1;
-        }
-        public class PlayerState
-        {
-            public string playerName;
-            public Vector3 position;
-            public int points;
-            public int? weaponAmmo;
-            public int? reserveAmmo;
-            public string[] currentWeapons;
-            public int currentWeaponIndex;
-        }
-        public class EventState
-        {
-            public string eventName;
-            public GameState gameState;
-        }
-    }
-    [HarmonyPatch(typeof(WaveManager), nameof(WaveManager.NewWave))]
-    public class WaveManager_NewWave_Patch
-    {
-        public static void Postfix(AgentBehaviourSpawner __instance)
-        {
-            LeaderboardValidator.SaveEventState("NewWave");
-        }
-    }
-    [HarmonyPatch(typeof(AbilitySlotBase), nameof(AbilitySlotBase.ModifyBlood))]
-    public class AbilitySlotBase_ModifyBlood_Patch
-    {
-        public static void Postfix(AbilitySlotBase __instance)
-        {
-            LeaderboardValidator.SaveEventState("ModifyBlood");
-        }
-    }
-    [HarmonyPatch(typeof(BloodBucksBank), "set_NetworkbloodBucks")]
-    class Patch_NetworkbloodBucks
-    {
-        static void Postfix(float value)
-        {
-            LeaderboardValidator.SaveEventState("Bucks");
         }
     }
 }
