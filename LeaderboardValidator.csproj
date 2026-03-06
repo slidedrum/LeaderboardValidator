@@ -14,7 +14,11 @@
     </RestoreAdditionalProjectSources>
     <RootNamespace>LeaderboardValidator</RootNamespace>
   </PropertyGroup>
-
+  <Target Name="PostBuild" AfterTargets="Build">
+    <Copy 
+      SourceFiles="$(TargetDir)$(AssemblyName).dll"
+      DestinationFolder="K:\SteamLibrary\steamapps\common\Blood Reaver Playtest\BepInEx\plugins" />
+  </Target>
   <ItemGroup>
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
