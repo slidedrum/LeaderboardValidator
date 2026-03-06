@@ -35,7 +35,7 @@ namespace LeaderboardValidator
         }
         public void Setup()
         {
-            
+            //TODO handle match ending and restarts
         }
 
         public static Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
@@ -43,6 +43,8 @@ namespace LeaderboardValidator
         public static List<GameState> gameStates = new List<GameState>();
         public static float LastUpdateTime = 0f;
         public static float UpdateInterval = 5f;
+        public static List<LogworthyEvent> eventsList = new();
+        public const int maxEventListSizeBeforeForcedSave = 10;
         public static void Update(Clock clock)
         {
             var currentTime = Traverse.Create(clock).Field("currentTime").GetValue<float>();
@@ -52,13 +54,12 @@ namespace LeaderboardValidator
                 SaveGameState();
             }
         }
-        //TODO Actually make a method to validate the event states.
+        //TODO Actually make a method to validate the event states. (should be server side in a real implemenation)
         private void Awake()
         {
             // Plugin startup logic
             Logger = base.Logger;
             Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
-
             harmony.PatchAll();
         }
         public static void SaveGameState()
@@ -66,18 +67,19 @@ namespace LeaderboardValidator
             Logger.LogInfo("Saving game state");
             gameStates.Add(new GameState());
         }
-        public static void SaveEventState(string eventName)
+        public static void addEventToList(LogworthyEvent logworthyEvent)
         {
-            Logger.LogInfo($"Saving event state for {eventName}");
-            //EventState eventState = new EventState()
-            //{
-            //    eventName = eventName,
-            //    gameState = new GameState()
-            //};
-            Logger.LogInfo($"Saved event state for {eventName}");
-            //eventStates.Add(eventState);
+            Logger.LogInfo("Adding item to event list");
+            eventsList.Add(logworthyEvent);
+            if (eventsList.Count > maxEventListSizeBeforeForcedSave)
+                SaveGameState();
         }
 
-
+        internal static List<LogworthyEvent> popEventList()
+        {
+            List<LogworthyEvent> ret = new(eventsList);
+            eventsList.Clear();
+            return ret;
+        }
     }
 }

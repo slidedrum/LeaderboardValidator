@@ -1,24 +1,41 @@
 ﻿using EnemyComponent;
 using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 namespace LeaderboardValidator
 {
-    public class GameState
+    public class TimeStamp
     {
-        public List<PlayerState> playerStateList = new();
-        public List<EnemyState> enemyStateList = new();
-        public int currentRound = -1;
-        public int zombiesLeft = -1;
         public float absoluteTimestamp;
         public float gameTimestamp;
-
-        public GameState() //A method to get the current gamestate. This is called by SaveEventState.
+        public float systemTimestamp;
+        public TimeStamp()
         {
             gameTimestamp = Traverse.Create(UIManager.Instance.clock).Field("currentTime").GetValue<float>();
             absoluteTimestamp = Time.time;
+            systemTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        }
+    }
+    public class GameState 
+    {
+        //The whole data structure should probably be obfuscated somehow.  It'll never be impossible to reverse engineer, but it should't be this easy.
+        //The plan is to encode this into a binary format.  Send that over the network to the server.  The server decodes it, and validates if it makes sense.
+        //Could also use this data to make a replay viewer for moderaters to see what happend durring the game.  Similar to a theatre mode replay.
+        public List<PlayerState> playerStateList = new();
+        public List<EnemyState> enemyStateList = new();
+        public List<LogworthyEvent> eventsList = new();
+        public int currentRound = -1;
+        public int zombiesLeft = -1;
+        public TimeStamp timeStamp;
+
+        public GameState()
+        {
+            timeStamp = new();
+            eventsList = LeaderboardValidator.popEventList();
+
             var playerList = TargetingListener.instance.playerList;
             foreach (Player player in playerList)
             {
@@ -99,8 +116,5 @@ namespace LeaderboardValidator
             currentHealth = (int)agent.GetHealth().CurrentHealth;
         }
     }
-    public abstract class EventState
-    {
-        string eventName;
-    }
+
 }
